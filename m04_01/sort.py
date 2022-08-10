@@ -1,10 +1,15 @@
 import os
 import re
+import logging
+import threading
+
+log = logging.getLogger(__name__)
+
 from optparse import OptionParser
 import time
 import shutil
 import zipfile
-from threading import Thread, Semaphore
+from threading import Thread, Semaphore, RLock, current_thread
 
 parser = OptionParser()
 parser.add_option("-p", "--path", dest="directory_path",
@@ -186,6 +191,33 @@ def re_archives(directory):
                 # file.close()
                 # remove(os.path.join(path, file))
 
+class Pool:
+    def __init__(self):
+        self.active = []
+        self.lock = RLock()
+
+    def make_active(self, name):
+        with self.lock:
+            self.active.append(name)
+            log.debug(f'The thread {name} started to work. Active threads in the pool: {self.active}')
+
+    def make_inactive(self, name):
+        with self.lock:
+            self.active.remove(name)
+            log.debug(f'The thread {name} finished his work. Active threads in the pool: {self.active}')
+
+
+def worker(semaphore: Semaphore, pool: Pool, subdirectory):
+    log.debug('Wait')
+    with semaphore:
+        name = current_thread().name
+        pool.make_active(name)
+        start = time.time()
+        sort_all_files(subdirectory)  # sorting files in the given folder
+        pool.make_inactive(name)
+        # check timing
+        elapsed_time = time.time() - start
+        print(f"An elapsed time used in each thread: {elapsed_time}")
 
 if __name__ == "__main__":
 
@@ -195,14 +227,21 @@ if __name__ == "__main__":
     print("subdirectories")
     print(subdirectories)
 
-    for subdirectory in subdirectories:
+    # for subdirectory in subdirectories:
         # sort directly
         # sort_all_files(subdirectory)
 
         # sort using threads
-        start = time.time()
-        thread = Thread(target=sort_all_files, args=(subdirectory,))
+        # start = time.time()
+        # thread = Thread(target=sort_all_files, args=(subdirectory,))
+        # thread.start()
+        # thread.join()
+        # elapsed_time = time.time() - start
+        # print(f"An elapsed time used in each thread: {elapsed_time}")
+
+    # sort using Semaphore pool
+    semaphore = threading.Semaphore(3)
+    pool = Pool()
+    for subdirectory in subdirectories:
+        thread = Thread(name=f'{subdirectory}', target=worker, args=(semaphore, pool, subdirectory))
         thread.start()
-        thread.join()
-        elapsed_time = time.time() - start
-        print(f"An elapsed time used in each thread: {elapsed_time}")
