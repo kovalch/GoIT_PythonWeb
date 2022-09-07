@@ -1,0 +1,104 @@
+-- 5 students with highest average mark on all subjects
+SELECT s.name, round(AVG(m.mark), 2) AS avg_mark
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+GROUP BY s.id
+ORDER BY avg_mark DESC
+LIMIT 5;
+
+
+-- 1 student with highest average mark on one concrete, e.g., lecture id 5, subject
+SELECT l.name, s.name, round(AVG(m.mark), 2) AS avg_mark
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+WHERE l.id = 5
+GROUP BY s.id, l.id
+ORDER BY avg_mark DESC
+LIMIT 1;
+
+
+-- Average mark on one concrete subject in the group
+SELECT l.name, g.name, round(AVG(m.mark), 2) AS avg_mark
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN groups g ON g.id = s.group_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+WHERE l.id = 3
+GROUP BY g.id
+ORDER BY avg_mark DESC;
+
+-- Average mark this year
+SELECT round(AVG(mark), 2) AS avg_mark
+FROM marks;  -- Which lectures gives a concrete professor
+SELECT l.name, p.name
+FROM professors p
+LEFT JOIN lectures l ON l.professor_id = p.id
+WHERE p.id = 3;
+
+-- List of students in the given group, e.g., group id 3
+SELECT s.name, g.name
+FROM students s
+LEFT JOIN groups g ON g.id = s.group_id
+WHERE g.id = 3;
+
+
+-- Student’s marks in the given group and lecture
+SELECT l.name, s.name, g.name, m.mark, m.created_at
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+LEFT JOIN groups g ON g.id = s.group_id
+WHERE l.id = 3 AND g.id = 1;
+
+-- Student’s marks in the given group and lecture at the latest lecture.
+SELECT l.name, s.name, g.name, m.mark, m.created_at
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+LEFT JOIN groups g ON g.id = s.group_id
+WHERE l.id = 3
+AND g.id = 1
+AND m.created_at = (
+-- inner select to find the latest lecture date
+	SELECT m2.created_at
+	FROM marks m2
+		LEFT JOIN students s2 ON s2.id = m2.student_id
+		LEFT JOIN groups g2 ON g2.id = s2.group_id
+	WHERE m.lecture_id = 3
+	AND g2.id = 1
+ORDER BY m2.created_at DESC
+limit 1
+)
+ORDER BY created_at DESC;
+
+
+-- List of the lectures that given student participates
+SELECT s.name, l.name
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+WHERE m.student_id = 11;  -- List of lectures with a given professor that  given student participates
+SELECT s.name, p.name, l.name
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+LEFT JOIN professors p ON p.id = l.professor_id
+WHERE m.student_id = 1 AND p.id = 2;
+
+-- Average mark that the professor gives to a given student
+SELECT s.name, p.name, round(AVG(m.mark), 2) AS avg_mark
+FROM marks m
+LEFT JOIN students s ON s.id = m.student_id
+LEFT JOIN lectures l ON l.id = m.lecture_id
+LEFT JOIN professors p ON p.id = l.professor_id
+WHERE m.student_id = 1 AND p.id = 2
+GROUP BY s.name, p.name;
+
+-- Average mark that given professor usually gives
+SELECT p.name, round(AVG(m.mark), 2) AS avg_mark
+FROM marks m
+LEFT JOIN lectures l ON l.id = m.lecture_id
+LEFT JOIN professors p ON p.id = l.professor_id
+WHERE p.id = 3
+GROUP BY p.name;
