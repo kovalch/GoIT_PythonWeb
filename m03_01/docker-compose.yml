@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-personal-helper
+    restart: unless-stopped
+    ports:
+      - "8000:5000"
+    networks:
+      - app-networks
+  db:
+    image: "mongo:latest"
+    container_name: web-mongo-db
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+    ports:
+      - '27017:27017'
+    networks:
+      - app-networks
+
+networks:
+  app-networks:
+    driver: bridge
